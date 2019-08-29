@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    ports:
+      - 80:80
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+  db:
+    image: "postgres:9"
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  api:
+    build: ./api
+    volumes:
+      - ./api:/usr/server
+    links:
+      - db
+    environment:
+      VIRTUAL_HOST: api.testdomain.local
+      DB_CONNECTION: postgres://postgres:postgres@db:5432/postgres
+
+  ssr:
+    build: ./ssr
+    volumes:
+      - ./ssr:/usr/server
+    environment:
+      VIRTUAL_HOST: testdomain.local
+
+  node:
+    build: ./node
+    volumes:
+      - ./node:/usr/server
+    environment:
+      VIRTUAL_HOST: node.testdomain.local
+
+  rust:
+    build: ./rust
+    volumes:
+      - ./rust:/usr/server
+    links:
+      - db
+    environment:
+      VIRTUAL_HOST: rust.testdomain.local
+      DB_CONNECTION: postgres://postgres:postgres@db:5432/postgres
+
+  clj:
+    build: ./clj
+    volumes:
+      - ./clj:/usr/server
+    links:
+      - db
+    environment:
+      VIRTUAL_HOST: clj.testdomain.local
+      DB_CONNECTION: postgres://postgres:postgres@db:5432/postgres
